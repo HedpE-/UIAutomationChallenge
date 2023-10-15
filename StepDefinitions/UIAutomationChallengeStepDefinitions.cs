@@ -60,7 +60,7 @@ namespace UiAutomationChallenge.StepDefinitions
             shadowRoot.FindElement(By.XPath(PurchasePrice_Combobox_Xpath));
             element.Click();
 
-            element = Wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementToBeClickable(By.XPath(PurchasePrice_DropdownPanel_Xpath)));
+            Wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementToBeClickable(By.XPath(PurchasePrice_DropdownPanel_Xpath)));
         }
 
         [Then(@"I click on device price ""([^""]*)""")]
@@ -188,6 +188,8 @@ namespace UiAutomationChallenge.StepDefinitions
             }
             else
                 driverFilePath = Path.Combine(Path.GetTempPath(), DriverBinaryFileName);
+
+            DriverFilePath = driverFilePath;
 
             if (File.Exists(driverFilePath))
             {
