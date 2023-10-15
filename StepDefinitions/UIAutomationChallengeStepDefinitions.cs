@@ -1,6 +1,5 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Support.Extensions;
 using OpenQA.Selenium.Support.UI;
 using System;
 using System.Diagnostics;
@@ -24,6 +23,9 @@ namespace UiAutomationChallenge.StepDefinitions
 
         private readonly string PurchasePrice_Combobox_Xpath = "//input[@name='purchasePrice']";
         private readonly string PurchasePrice_DropdownPanel_Xpath = "//ul[@id='list']";
+        private readonly string PurchasePrice_DropdownPanel_DevicePriceItem_Xpath = "//ul[@id='list']/li{@text='$1']";
+        private readonly string PlanCard_ProductName_Xpath = "//p[@class='card-title']";
+        private readonly string PlanCard_SelectButton_Xpath = "//*[@id='card']//a";
 
         private string DriverFilePath;
         private IWebDriver Driver;
@@ -52,10 +54,10 @@ namespace UiAutomationChallenge.StepDefinitions
         [Then(@"I expand the Purchase Price dropdown")]
         public void ThenIExpandThePurchsePriceDropdown()
         {
-            var element = Driver.FindElement(By.Id("purchasePrice"));
-            var shadowRoot = Driver.ExecuteJavaScript<IWebElement>("return(arguments[0].shadowRoot.querySelector('" + PurchasePrice_Combobox_Xpath + "'));", element);
+            var element = Driver.FindElement(By.Id("75715"));
+            var shadowRoot = element.GetShadowRoot();
 
-            element = Wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementToBeClickable(By.XPath(PurchasePrice_Combobox_Xpath)));
+            shadowRoot.FindElement(By.XPath(PurchasePrice_Combobox_Xpath));
             element.Click();
 
             element = Wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementToBeClickable(By.XPath(PurchasePrice_DropdownPanel_Xpath)));
@@ -65,13 +67,29 @@ namespace UiAutomationChallenge.StepDefinitions
         public void ThenIClickOnDevicePrice(string devicePrice)
         {
             ChosenDevicePrice = devicePrice;
+
+            var element = Driver.FindElement(By.Id("75715"));
+            var shadowRoot = element.GetShadowRoot();
+
+            element = shadowRoot.FindElement(By.XPath(string.Format(PurchasePrice_DropdownPanel_DevicePriceItem_Xpath, devicePrice)));
+            Wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementToBeClickable(element));
+            element.Click();
         }
 
         [Then(@"I click Select on the Plan Card")]
         public void ThenIClickSelectOnThePlanCard()
         {
-            Utm_Source = "";
-            ChosenProductName = "";
+            Utm_Source = Regex.Match(Driver.Url, ".+utm_source=([^&]+)").Groups[1].Value;
+
+            var element = Driver.FindElement(By.Id("75715"));
+            var shadowRoot = element.GetShadowRoot();
+
+            element = shadowRoot.FindElement(By.XPath(PlanCard_ProductName_Xpath));
+            ChosenProductName = element.Text;
+
+            element = shadowRoot.FindElement(By.XPath(PlanCard_SelectButton_Xpath));
+            Wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementToBeClickable(element));
+            element.Click();
         }
 
         [Then(@"I enter IMEI ""([^""]*)""")]
@@ -151,7 +169,6 @@ namespace UiAutomationChallenge.StepDefinitions
         public void GivenIInitializeTheSeleniumDriverWithParameters(Table table)
         {
             bool hideCommandPromptWindow = bool.Parse(table.Rows[0]["hideCommandPromptWindow"]);
-            string proxy = table.Rows[0]["proxy"];
             bool headless = bool.Parse(table.Rows[0]["headless"]);
             string driverFilePath = table.Rows[0]["driverFilePath"];
 
@@ -180,7 +197,7 @@ namespace UiAutomationChallenge.StepDefinitions
                 }
                 catch (Exception e)
                 {
-                    if (e.Message.StartsWith("Access to the path") && e.Message.EndsWith("is denied."))
+                    if (e is UnauthorizedAccessException)
                     {
                         var allProcesses = Process.GetProcesses().Where(p =>
                         {
@@ -209,6 +226,7 @@ namespace UiAutomationChallenge.StepDefinitions
 
             options.AddArgument("--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 10_3 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/56.0.2924.75 Mobile/14E5239e Safari/602.1");
             options.AddArgument("ignore-certificate-errors");
+            options.AddArgument("start-maximized");
             if (headless)
                 options.AddArgument("--headless");
             if (hideCommandPromptWindow)
@@ -221,8 +239,6 @@ namespace UiAutomationChallenge.StepDefinitions
                 Driver = new ChromeDriver(options);
 
             Wait = new WebDriverWait(Driver, WaitTimeout);
-
-            Driver.Manage().Window.Maximize();
         }
 
         [Then(@"I stop the Selenium Driver")]
